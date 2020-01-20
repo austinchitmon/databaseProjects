@@ -24,7 +24,6 @@ public class Record {
         state = null;
         zip = 0;
     }
-
     public boolean getExists() { return this.exists;}
 
     public int getEmployees() {

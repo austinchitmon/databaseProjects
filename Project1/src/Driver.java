@@ -1,7 +1,11 @@
+// Created by: Austin Chitmon
+// Purpose: Basic file-based database manager
+
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Driver {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Scanner input = new Scanner(System.in);
         FileManager fileManager = new FileManager();
         boolean alive = true;
@@ -45,10 +49,8 @@ public class Driver {
                     fileManager.closeDatabase();
                     break;
                 case 4:
-                    fileManager.displayRecord();
-                    break;
                 case 5:
-                    fileManager.updateRecord();
+                    fileManager.displayOrUpdateRecord(operation);
                     break;
                 case 6:
                     fileManager.createReport();
@@ -63,7 +65,6 @@ public class Driver {
                     System.out.print("Closing... \n");
                     alive = false;
                     break;
-
             }
         }
     }

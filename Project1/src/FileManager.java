@@ -1,17 +1,16 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class FileManager {
-    String[] fields = {"RANK", "NAME", "CITY", "STATE", "ZIP", "EMPLOYEES"};
+    DatabaseCreator dbc = new DatabaseCreator();
     Scanner input = new Scanner(System.in);
     String fileName = null;
     RandomAccessFile currentData = null;
     RandomAccessFile currentConfig = null;
     RandomAccessFile currentOverflow = null;
     Record currentRecord = new Record();
+    boolean isDatabaseOpen = false;
 
     public RandomAccessFile getCSVFileToCreateDatabase() {
         RandomAccessFile csvFile = null;
@@ -31,41 +30,30 @@ public class FileManager {
         File newData;
         File newOverflow;
 
-        // Try and create config file
+        // Try and create config and data files
         try {
             newConfig = new File(fileName + ".config");
-            if (newConfig.createNewFile()) {
-                System.out.println("File created: " + newConfig.getName());
-                // TODO: import data to config file
-            } else {
-                System.out.println("File already exists.");
-            }
-        } catch (IOException e) {
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        }
-
-        // Try and create data file
-        try {
             newData = new File(fileName + ".data");
-            if (newData.createNewFile()) {
+            if (newConfig.createNewFile() && newData.createNewFile()) {
+                System.out.println("File created: " + newConfig.getName());
                 System.out.println("File created: " + newData.getName());
-                // TODO: import data to data file
+                dbc.createNewConfigAndDataFiles(csvFile, fileName);
+
             } else {
-                System.out.println("File already exists.");
+                System.out.println("Data and Config files already exist, stopping database creation...");
             }
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
         }
 
-        // Try and create overflo file
+        // Try and create overflow file
         try {
-            newOverflow = new File(fileName + ".overflo");
+            newOverflow = new File(fileName + ".overflow");
             if (newOverflow.createNewFile()) {
                 System.out.println("File created: " + newOverflow.getName());
             } else {
-                System.out.println("File already exists.");
+                System.out.println("Overflow file already exists, stopping database creation...");
             }
         } catch (IOException e) {
             System.out.println("An error occurred.");
@@ -80,6 +68,9 @@ public class FileManager {
       if(csvFile != null) {
           createNewFiles(csvFile);
       }
+      else {
+          System.out.println("Error retrieving .csv file");
+      }
     }
 
     public void openDatabase() {
@@ -93,43 +84,88 @@ public class FileManager {
                 // throws FileNotFoundException if files aren't already created.
                 new RandomAccessFile(dbName + ".data", "r");
                 new RandomAccessFile(dbName + ".config", "r");
-                new RandomAccessFile(dbName + ".overflo", "r");
+                new RandomAccessFile(dbName + ".overflow", "r");
 
                 // if passed the three statements above, means files already exist, which is good.
                 // so now, set 'current' variables to track the opened files.
-                currentData = new RandomAccessFile(dbName + ".data", "rw");
-                currentConfig = new RandomAccessFile(dbName + ".config", "rw");
-                currentOverflow = new RandomAccessFile(dbName + ".overflo", "rw");
+                //  First, check if another database is already open.
+                if(!isDatabaseOpen) {
+                    this.currentData = new RandomAccessFile(dbName + ".data", "rw");
+                    this.currentConfig = new RandomAccessFile(dbName + ".config", "rw");
+                    this.currentOverflow = new RandomAccessFile(dbName + ".overflow", "rw");
+                    this.isDatabaseOpen = true;
+                    System.out.printf("Database '%s' successfully opened \n \n", dbName);
+                } else {
+                    System.out.print("Please close the already opened database to open another database. \n \n");
+                }
+
             } catch(FileNotFoundException e) {
-                System.out.printf("Error, file not found: %s \n Cannot open database. \n \n", e.toString());
-                return;
+                System.out.printf("Error, file not found: %s\nCannot open database. \n \n", e.toString());
             }
-        System.out.printf("Database %s successfully opened \n \n", dbName);
     }
 
     public void closeDatabase() {
-        if(currentOverflow == null || currentConfig == null || currentData == null) {
+        if(noOpenedDatabase()) {
             System.out.print("Error! No database open to close \n\n");
         }
         else {
             currentData = null;
             currentConfig = null;
             currentOverflow = null;
+            isDatabaseOpen = false;
             System.out.print("Closing opened database...\n\n");
         }
 
     }
 
-    public void displayRecord() {
+    public void displayOrUpdateRecord(int operation) throws IOException {
+        String operationType = (operation == 4) ? "display" : "update";
+        if(noOpenedDatabase()) {
+            System.out.printf("Error! No database open to %s record from. \n\n", operationType);
+        }
+        else {
+            System.out.println( this.findRecord(4) );
+        }
 
     }
 
-    public void updateRecord() {
+    public String findRecord(int numRecord) throws IOException {
+        String record = "NOT_FOUND";
+        if ((numRecord >=1) && (numRecord <= dbc.numRecords))
+        {
+            currentData.seek(0); // return to the top fo the file
+            currentData.skipBytes(numRecord * dbc.recordSize);
+            record = currentData.readLine();
+        }
+        return record;
 
     }
 
     public void createReport() {
-
+        if(noOpenedDatabase()) {
+            System.out.print("Error! No database open to create report from. \n\n");
+        }
+        else {
+            try {
+                FileWriter writer = new FileWriter("report.txt");
+                String line;
+                for(int i = 0; i<10; i++){
+                    if((line = currentData.readLine()) != null) {
+                        System.out.println(line);
+                        writer.write(line.toCharArray());
+                        writer.write("\r\n");
+                    }
+                    else {
+                        System.out.println("End of file reached before 10 records created in report. \n");
+                    }
+                }
+                writer.close();
+                currentData.seek(0);
+                System.out.print("Creating report...\n\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void addRecord() {
@@ -140,6 +176,7 @@ public class FileManager {
 
     }
 
-
-
+    public boolean noOpenedDatabase() {
+        return currentOverflow == null || currentConfig == null || currentData == null && isDatabaseOpen;
+    }
 }
