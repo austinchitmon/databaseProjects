@@ -41,7 +41,8 @@ public class DatabaseCreator {
 
         //add number of bytes (chars) for each field together to find total record size for each record.
         for (int num : numBytesForEachField) recordSize = recordSize + num;
-        newConfigFile.writeBytes("RECORDSIZE," + recordSize + "\r\n");
+        // +2 to account for the /n/r escape characters
+        newConfigFile.writeBytes("RECORDSIZE," + (recordSize + 2) + "\r\n");
     }
 
     public void createConfigFileFields(String[] values, RandomAccessFile newConfigFile) throws IOException {
@@ -61,16 +62,16 @@ public class DatabaseCreator {
                     this.numBytesForEachField.add(20);
                     break;
                 case "STATE":
-                    newConfigFile.writeBytes("3\r\n");
-                    this.numBytesForEachField.add(3);
+                    newConfigFile.writeBytes("6\r\n");
+                    this.numBytesForEachField.add(6);
                     break;
                 case "ZIP":
                     newConfigFile.writeBytes("6\r\n");
                     this.numBytesForEachField.add(6);
                     break;
                 case "EMPLOYEES":
-                    newConfigFile.writeBytes("7\r\n");
-                    this.numBytesForEachField.add(7);
+                    newConfigFile.writeBytes("10\r\n");
+                    this.numBytesForEachField.add(10);
                     break;
                 default:
                     newConfigFile.writeBytes("UNDEFINED\r\n");
@@ -83,7 +84,7 @@ public class DatabaseCreator {
             newDatabaseFile.writeBytes(values[i]);
             int remainingEmptyBytesLength = numBytesForEachField.get(i) - values[i].length();
             if (remainingEmptyBytesLength > 0) {
-                String emptyString = new String(new char[remainingEmptyBytesLength]).replace('\0', ' ');
+                String emptyString = new String(new char[remainingEmptyBytesLength]).replace('\0', '-');
                 newDatabaseFile.writeBytes(emptyString);
             }
         }

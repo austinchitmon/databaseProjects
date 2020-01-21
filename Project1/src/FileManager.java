@@ -1,5 +1,7 @@
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 public class FileManager {
@@ -9,7 +11,10 @@ public class FileManager {
     RandomAccessFile currentData = null;
     RandomAccessFile currentConfig = null;
     RandomAccessFile currentOverflow = null;
-    Record currentRecord = new Record();
+    int currentNumRecords = 0;
+    int currentRecordSize = 0;
+    List<String> currentFields = new ArrayList<>();
+    List<String> currentFieldsNoSpace = new ArrayList<>();
     boolean isDatabaseOpen = false;
 
     public RandomAccessFile getCSVFileToCreateDatabase() {
@@ -94,6 +99,31 @@ public class FileManager {
                     this.currentConfig = new RandomAccessFile(dbName + ".config", "rw");
                     this.currentOverflow = new RandomAccessFile(dbName + ".overflow", "rw");
                     this.isDatabaseOpen = true;
+
+                    //get number of records, field names, and record size of the currently opened database file.
+                    String line;
+                    while((line = this.currentConfig.readLine()) != null) {
+                        String[] values = line.split(",");
+                        switch(values[0]) {
+                            case "NUMRECORDS":
+                                this.currentNumRecords = Integer.parseInt(values[1]);
+                                break;
+                            case "RECORDSIZE":
+                                this.currentRecordSize = Integer.parseInt(values[1]);
+                                break;
+                            case "RANK":
+                            case "NAME":
+                            case "CITY":
+                            case "ZIP":
+                            case "EMPLOYEES":
+                            case "STATE":
+                                // in the currentFields array, add each field AND the remaining empty spaces for the field
+                                // this is so when we create the report, everything lines up nicely
+                                this.currentFields.add(values[0] + new String(new char[(Integer.parseInt(values[1]) - values[0].length())]).replace('\0', ' '));
+                            default:
+                        }
+                    }
+
                     System.out.printf("Database '%s' successfully opened \n \n", dbName);
                 } else {
                     System.out.print("Please close the already opened database to open another database. \n \n");
@@ -101,6 +131,8 @@ public class FileManager {
 
             } catch(FileNotFoundException e) {
                 System.out.printf("Error, file not found: %s\nCannot open database. \n \n", e.toString());
+            } catch (IOException e) {
+                System.out.printf("Error occurred %s \n", e.toString());
             }
     }
 
@@ -112,33 +144,95 @@ public class FileManager {
             currentData = null;
             currentConfig = null;
             currentOverflow = null;
+            currentRecordSize = 0;
+            currentNumRecords = 0;
+            currentFields = new ArrayList<>();
+            currentFieldsNoSpace = new ArrayList<>();
             isDatabaseOpen = false;
             System.out.print("Closing opened database...\n\n");
         }
 
     }
 
-    public void displayOrUpdateRecord(int operation) throws IOException {
-        String operationType = (operation == 4) ? "display" : "update";
+    public void displayUpdateOrDeleteRecord(int operation) throws IOException {
+        String operationType = "";
+        String currentRecord = null;
+
+        switch(operation) {
+            case 4:
+                operationType = "display";
+                break;
+            case 5:
+                operationType = "update";
+                break;
+            case 8:
+                operationType = "delete";
+                break;
+        }
+
         if(noOpenedDatabase()) {
             System.out.printf("Error! No database open to %s record from. \n\n", operationType);
         }
         else {
-            System.out.println( this.findRecord(4) );
-        }
+            try {
+                System.out.print("Enter the rank of the record you would like to find: ");
+                int numRecord = Integer.parseInt(input.nextLine());
+                currentRecord = this.findRecord(numRecord);
+                this.formatFoundRecord(currentRecord);
+                if(operationType.equals("update")) {
+                    this.updateRecord(currentRecord, numRecord - 1);
+                }
+                else if(operationType.equals("delete")) {
+                    this.deleteRecord(currentRecord, numRecord - 1);
+                }
+            }
+            catch (Exception e) {
+                System.out.printf("Error occurred: %s \n", e.toString());
+            }
 
+        }
+        // reset necessary trackers
+        this.currentFieldsNoSpace = new ArrayList<>();
+        this.currentData.seek(0);
     }
 
-    public String findRecord(int numRecord) throws IOException {
-        String record = "NOT_FOUND";
-        if ((numRecord >=1) && (numRecord <= dbc.numRecords))
-        {
+    public String findRecord(int numRecord) throws Exception {
+        if ((numRecord >=1) && (numRecord <= this.currentNumRecords)) {
             currentData.seek(0); // return to the top fo the file
-            currentData.skipBytes(numRecord * dbc.recordSize);
-            record = currentData.readLine();
+            currentData.skipBytes((numRecord - 1) * this.currentRecordSize);
+            return currentData.readLine();
         }
-        return record;
+        else {
+            throw new Exception("Out of bounds");
+        }
+    }
 
+    public void updateRecord(String currentRecord, int numRecord) throws Exception {
+        System.out.println("Which field would you like to update?");
+        for (String word : this.currentFieldsNoSpace) System.out.printf("'%s' ", word);
+        System.out.print("\nChoice: ");
+        String fieldToUpdate = input.nextLine();
+        if(this.currentFieldsNoSpace.contains(fieldToUpdate)) {
+            if(fieldToUpdate.equals("RANK")) {
+                throw new Exception("Cannot update rank, as it is the primary key.");
+            }
+            // TODO: Have field they want to update, now update the field
+        }
+        else {
+            throw new Exception("Field not present.");
+        }
+    }
+
+    public void formatFoundRecord(String record) {
+        List<String> parsedRecord = new ArrayList<>();
+        for (String word : this.currentFields) this.currentFieldsNoSpace.add(word.trim());
+        record = record.replaceAll("-+",",");
+        parsedRecord = new ArrayList<String>(Arrays.asList(record.split(",")));
+
+        for(int i = 0; i < currentFieldsNoSpace.size(); i++) {
+            System.out.printf("%s: %s \t", this.currentFieldsNoSpace.get(i), parsedRecord.get(i));
+        }
+        System.out.print("\n");
     }
 
     public void createReport() {
@@ -147,11 +241,15 @@ public class FileManager {
         }
         else {
             try {
+                this.currentData.seek(0);
                 FileWriter writer = new FileWriter("report.txt");
+                String currentFieldsString = "";
+                for(String word: currentFields) currentFieldsString = currentFieldsString.concat(word);
+                writer.write(currentFieldsString.toCharArray());
+                writer.write("\r\n");
                 String line;
                 for(int i = 0; i<10; i++){
                     if((line = currentData.readLine()) != null) {
-                        System.out.println(line);
                         writer.write(line.toCharArray());
                         writer.write("\r\n");
                     }
@@ -172,8 +270,14 @@ public class FileManager {
 
     }
 
-    public void deleteRecord() {
-
+    public void deleteRecord(String currentRecord, int numRecord) throws Exception {
+        String replacementString = "MISSING";
+        replacementString = replacementString.concat(new String(new char[this.currentRecordSize - replacementString.length() -2]).replace('\0', '-'));
+        System.out.println(replacementString);
+        this.currentData.seek(0);
+        currentData.skipBytes((numRecord) * this.currentRecordSize);
+        currentData.writeBytes(replacementString + "\r\n");
+        System.out.print("Deleting the above record... \n\n");
     }
 
     public boolean noOpenedDatabase() {

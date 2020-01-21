@@ -50,16 +50,14 @@ public class Driver {
                     break;
                 case 4:
                 case 5:
-                    fileManager.displayOrUpdateRecord(operation);
+                case 8:
+                    fileManager.displayUpdateOrDeleteRecord(operation);
                     break;
                 case 6:
                     fileManager.createReport();
                     break;
                 case 7:
                     fileManager.addRecord();
-                    break;
-                case 8:
-                    fileManager.deleteRecord();
                     break;
                 case 9:
                     System.out.print("Closing... \n");
