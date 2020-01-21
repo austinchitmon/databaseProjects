@@ -1,10 +1,11 @@
-1     WALMART                                      BENTONVILLE         AR 72716 2300000
-2     BERKSHIRE HATHAWAY                           OMAHA               NE 68131 367700 
-3     APPLE                                        CUPERTINO           CA 95014 116000 
-4     EXXON MOBIL                                  IRVING              TX 75039 72700  
-5     MCKESSON                                     SAN FRANCISCO       CA 94104 68000  
-6     UNITEDHEALTH GROUP                           MINNETONKA          MN 55343 230000 
-7     CVS HEALTH                                   WOONSOCKET          RI 2895  204000 
-8     GENERAL MOTORS                               DETROIT             MI 48265 225000 
-9     AT&T                                         DALLAS              TX 75202 268540 
-10    FORD MOTOR                                   DEARBORN            MI 48126 201000 
+ID   RANK  NAME                                         CITY                STATE ZIP   EMPLOYEES 
+1----1-----WALMART--------------------------------------BENTONVILLE---------AR----72716-2300000---
+2----2-----BERKSHIRE HATHAWAY---------------------------OMAHA---------------NE----68131-367700----
+3----3-----APPLE----------------------------------------CUPERTINO-----------CA----95014-116000----
+4----4-----EXXON MOBIL----------------------------------IRVING--------------TX----75039-72700-----
+5----5-----MCKESSON-------------------------------------SAN FRANCISCO-------CA----94104-68000-----
+6----6-----UNITEDHEALTH GROUP---------------------------MINNETONKA----------MN----55343-230000----
+7----7-----CVS HEALTH-----------------------------------WOONSOCKET----------RI----2895--204000----
+8----8-----GENERAL MOTORS-------------------------------DETROIT-------------MI----48265-225000----
+9----9-----AT&T-----------------------------------------DALLAS--------------TX----75202-268540----
+10---10----FORD MOTOR-----------------------------------DEARBORN------------MI----48126-201000----

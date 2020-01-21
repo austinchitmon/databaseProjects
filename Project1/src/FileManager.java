@@ -111,6 +111,7 @@ public class FileManager {
                             case "RECORDSIZE":
                                 this.currentRecordSize = Integer.parseInt(values[1]);
                                 break;
+                            case "ID":
                             case "RANK":
                             case "NAME":
                             case "CITY":
@@ -170,30 +171,33 @@ public class FileManager {
                 break;
         }
 
-        if(noOpenedDatabase()) {
-            System.out.printf("Error! No database open to %s record from. \n\n", operationType);
-        }
-        else {
-            try {
-                System.out.print("Enter the rank of the record you would like to find: ");
-                int numRecord = Integer.parseInt(input.nextLine());
-                currentRecord = this.findRecord(numRecord);
-                this.formatFoundRecord(currentRecord);
-                if(operationType.equals("update")) {
-                    this.updateRecord(currentRecord, numRecord - 1);
-                }
-                else if(operationType.equals("delete")) {
-                    this.deleteRecord(currentRecord, numRecord - 1);
-                }
+        try {
+            if(noOpenedDatabase()) {
+                throw new Exception("No open Database to operate on");
             }
-            catch (Exception e) {
-                System.out.printf("Error occurred: %s \n", e.toString());
+            System.out.print("Enter the ID (rank if data unmodified) of the record you would like to find: ");
+            int numRecord = Integer.parseInt(input.nextLine());
+            currentRecord = this.findRecord(numRecord);
+            if(currentRecord.contains("MISSING")) {
+                throw new Exception("The record you searched for has been previously deleted.");
+            }
+            this.formatFoundRecord(currentRecord);
+            if(operationType.equals("update")) {
+                this.updateRecord(currentRecord, numRecord - 1);
+            }
+            else if(operationType.equals("delete")) {
+                this.deleteRecord(currentRecord, numRecord - 1);
             }
 
+            //reset pointer to current data to the 0th pos.
+            this.currentData.seek(0);
         }
-        // reset necessary trackers
+        catch (Exception e) {
+            System.out.printf("Error occurred: %s \n", e.toString());
+        }
+
+        // reset necessary trackers specific to displaying record
         this.currentFieldsNoSpace = new ArrayList<>();
-        this.currentData.seek(0);
     }
 
     public String findRecord(int numRecord) throws Exception {
@@ -213,8 +217,8 @@ public class FileManager {
         System.out.print("\nChoice: ");
         String fieldToUpdate = input.nextLine();
         if(this.currentFieldsNoSpace.contains(fieldToUpdate)) {
-            if(fieldToUpdate.equals("RANK")) {
-                throw new Exception("Cannot update rank, as it is the primary key.");
+            if(fieldToUpdate.equals("ID")) {
+                throw new Exception("Cannot update ID, as it is the primary key.");
             }
             // TODO: Have field they want to update, now update the field
         }

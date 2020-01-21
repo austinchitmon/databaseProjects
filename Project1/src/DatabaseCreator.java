@@ -8,11 +8,13 @@ public class DatabaseCreator {
     List<Integer> numBytesForEachField;
     int recordSize;
     int numRecords;
+    int idIncrementer;
 
     DatabaseCreator() {
         this.numBytesForEachField = new ArrayList<>();
         this.recordSize = 0;
         this.numRecords = 0;
+        this.idIncrementer = 1;
     }
 
     public void createNewConfigAndDataFiles(RandomAccessFile csvFile, String fileName) throws IOException {
@@ -46,13 +48,14 @@ public class DatabaseCreator {
     }
 
     public void createConfigFileFields(String[] values, RandomAccessFile newConfigFile) throws IOException {
+
+        // configure ID field
+        newConfigFile.writeBytes("ID,"+"5\r\n");
+        this.numBytesForEachField.add(5);
+
         for(int i = 0; i < values.length; i++) {
             newConfigFile.writeBytes(values[i] + ",");
             switch(values[i]){
-                case "RANK":
-                    newConfigFile.writeBytes("6\r\n");
-                    this.numBytesForEachField.add(6);
-                    break;
                 case "NAME":
                     newConfigFile.writeBytes("45\r\n");
                     this.numBytesForEachField.add(45);
@@ -61,10 +64,8 @@ public class DatabaseCreator {
                     newConfigFile.writeBytes("20\r\n");
                     this.numBytesForEachField.add(20);
                     break;
+                case "RANK":
                 case "STATE":
-                    newConfigFile.writeBytes("6\r\n");
-                    this.numBytesForEachField.add(6);
-                    break;
                 case "ZIP":
                     newConfigFile.writeBytes("6\r\n");
                     this.numBytesForEachField.add(6);
@@ -80,14 +81,26 @@ public class DatabaseCreator {
     }
 
     public void createDataFile(String[] values, RandomAccessFile newDatabaseFile) throws IOException {
+
+        // increment ID and write ID field
+        newDatabaseFile.writeBytes(Integer.toString(this.idIncrementer));
+        int remainingEmptyBytesLength = numBytesForEachField.get(0) - String.valueOf(this.idIncrementer).length();
+        String emptyString = new String(new char[remainingEmptyBytesLength]).replace('\0', '-');
+        newDatabaseFile.writeBytes(emptyString);
+
+
+
+        // write each other record field
+        // use get(i + 1) beacuse first field in numBytesForEachField is size of ID.
         for(int i = 0; i < values.length; i++) {
             newDatabaseFile.writeBytes(values[i]);
-            int remainingEmptyBytesLength = numBytesForEachField.get(i) - values[i].length();
+            remainingEmptyBytesLength = numBytesForEachField.get(i + 1) - values[i].length();
             if (remainingEmptyBytesLength > 0) {
-                String emptyString = new String(new char[remainingEmptyBytesLength]).replace('\0', '-');
+                emptyString = new String(new char[remainingEmptyBytesLength]).replace('\0', '-');
                 newDatabaseFile.writeBytes(emptyString);
             }
         }
         newDatabaseFile.writeBytes( "\r\n");
+        this.idIncrementer = this.idIncrementer + 1;
     }
 }
