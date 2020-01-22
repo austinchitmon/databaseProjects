@@ -1,5 +1,4 @@
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -10,14 +9,8 @@ public class FileManager {
     OverFlowOperations overflowOp = null;
     Scanner input = new Scanner(System.in);
     String fileName = null;
-    RandomAccessFile currentData = null;
-    RandomAccessFile currentConfig = null;
-    RandomAccessFile currentOverflow = null;
-    int currentNumRecords = 0;
-    int currentRecordSize = 0;
-    List<Integer> currentFieldSizes = new ArrayList<>();
-    List<String> currentFields = new ArrayList<>();
-    List<String> currentFieldsNoSpace = new ArrayList<>();
+
+    CurrentDatabase currentDB = new CurrentDatabase();
     List<String> parsedRecord = new ArrayList<>();
     boolean isDatabaseOpen = false;
 
@@ -99,45 +92,21 @@ public class FileManager {
                 // so now, set 'current' variables to track the opened files.
                 //  First, check if another database is already open.
                 if(!isDatabaseOpen) {
-                    this.currentData = new RandomAccessFile(dbName + ".data", "rw");
-                    this.currentConfig = new RandomAccessFile(dbName + ".config", "rw");
-                    this.currentOverflow = new RandomAccessFile(dbName + ".overflow", "rw");
+                    this.currentDB = new CurrentDatabase(dbName);
                     this.isDatabaseOpen = true;
 
                     //get number of records, field names, and record size of the currently opened database file.
-                    String line;
-                    while((line = this.currentConfig.readLine()) != null) {
-                        String[] values = line.split(",");
-                        switch(values[0]) {
-                            case "NUMRECORDS":
-                                this.currentNumRecords = Integer.parseInt(values[1]);
-                                break;
-                            case "RECORDSIZE":
-                                this.currentRecordSize = Integer.parseInt(values[1]);
-                                break;
-                            case "ID":
-                            case "RANK":
-                            case "NAME":
-                            case "CITY":
-                            case "ZIP":
-                            case "EMPLOYEES":
-                            case "STATE":
-                                // in the currentFields array, add each field AND the remaining empty spaces for the field
-                                // this is so when we create the report, everything lines up nicely
-                                this.currentFieldSizes.add(Integer.parseInt(values[1]));
-                                this.currentFields.add(values[0] + new String(new char[(Integer.parseInt(values[1]) - values[0].length())]).replace('\0', ' '));
-                            default:
-                        }
-                    }
-
+                    this.currentDB.setNumRecordsFieldNamesRecordSize();
                     System.out.printf("Database '%s' successfully opened \n \n", dbName);
                 } else {
                     System.out.print("Please close the already opened database to open another database. \n \n");
                 }
 
-            } catch(FileNotFoundException e) {
+            }
+            catch(FileNotFoundException e) {
                 System.out.printf("Error, file not found: %s\nCannot open database. \n \n", e.toString());
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 System.out.printf("Error occurred %s \n", e.toString());
             }
     }
@@ -147,14 +116,7 @@ public class FileManager {
             System.out.print("Error! No database open to close \n\n");
         }
         else {
-            currentData = null;
-            currentConfig = null;
-            currentOverflow = null;
-            currentRecordSize = 0;
-            currentNumRecords = 0;
-            currentFields = new ArrayList<>();
-            currentFieldsNoSpace = new ArrayList<>();
-            currentFieldSizes = new ArrayList<>();
+            this.currentDB.close();
             parsedRecord = new ArrayList<>();
             isDatabaseOpen = false;
             System.out.print("Closing opened database...\n\n");
@@ -182,7 +144,7 @@ public class FileManager {
             if(noOpenedDatabase()) {
                 throw new Exception("No open Database to operate on");
             }
-            System.out.print("Enter the ID (rank if data unmodified) of the record you would like to find: ");
+            System.out.printf("Enter the ID (rank if data unmodified) of the record you would like to %s: ", operationType);
             String recordID = input.nextLine();
             currentRecord = this.binarySearch(recordID);
             this.formatFoundRecord(currentRecord);
@@ -190,84 +152,93 @@ public class FileManager {
                 this.updateRecord(currentRecord, recordID);
             }
             else if(operationType.equals("delete")) {
-                this.deleteRecord(currentRecord, recordID);
+                this.deleteOrUpdateRecord(currentRecord, "Deleting", "");
             }
 
             //reset pointer to current data to the 0th pos.
-            this.currentData.seek(0);
+            this.currentDB.currentData.seek(0);
         }
         catch (Exception e) {
             System.out.printf("Error occurred: %s \n", e.toString());
         }
 
         // reset necessary trackers specific to displaying record
-        this.currentFieldsNoSpace = new ArrayList<>();
+        this.currentDB.currentFieldsNoSpace = new ArrayList<>();
     }
 
 
 
     public void updateRecord(String currentRecord, String recordId) throws Exception {
+        String newRecord;
         System.out.println("Which field would you like to update?");
-        for (String word : this.currentFieldsNoSpace) System.out.printf("'%s' ", word);
+        for (String word : this.currentDB.currentFieldsNoSpace) System.out.printf("'%s' ", word);
         System.out.print("\nChoice: ");
         String fieldToUpdate = input.nextLine();
-        if(this.currentFieldsNoSpace.contains(fieldToUpdate)) {
+        if(this.currentDB.currentFieldsNoSpace.contains(fieldToUpdate)) {
             switch(fieldToUpdate){
                 case "ID":
                     throw new Exception("Cannot update ID, as it is the primary key.");
                 case "RANK":
-                    inputUpdatedRecordField(1);
+                    newRecord = inputUpdatedRecordField(1);
                 case "NAME":
-                    inputUpdatedRecordField(2);
+                    newRecord = inputUpdatedRecordField(2);
                     break;
                 case "CITY":
-                    inputUpdatedRecordField(3);
+                    newRecord = inputUpdatedRecordField(3);
                     break;
                 case "STATE":
-                    inputUpdatedRecordField(4);
+                    newRecord = inputUpdatedRecordField(4);
                     break;
                 case "ZIP":
-                    inputUpdatedRecordField(5);
+                    newRecord = inputUpdatedRecordField(5);
                     break;
                 case "EMPLOYEES":
-                    inputUpdatedRecordField(6);
+                    newRecord = inputUpdatedRecordField(6);
                     break;
                 default:
                     throw new Exception("Field not present.");
             }
-            //TODO: here Once parsed string updated, seek and find like in delete record and write parsed string.
+
+            this.deleteOrUpdateRecord(currentRecord, "Updating", newRecord);
         }
         else {
             throw new Exception("Field not present.");
         }
     }
-    public void inputUpdatedRecordField(int pos) throws Exception {
+    public String inputUpdatedRecordField(int pos) throws Exception {
         String replacementValue;
         System.out.print("Enter replacement value: ");
         replacementValue = input.nextLine();
-        if(this.currentFieldSizes.get(pos) <= replacementValue.length()) {
-            System.out.printf("Field size: %d \t Replacement length: %d \n", this.currentFieldSizes.get(pos), replacementValue.length());
+        if(this.currentDB.currentFieldSizes.get(pos) <= replacementValue.length()) {
+            System.out.printf("Field size: %d \t Replacement length: %d \n", this.currentDB.currentFieldSizes.get(pos), replacementValue.length());
             throw new Exception("Replacement string length cannot be equal to or greater than maximum field size.");
         }
         else {
             this.parsedRecord.set(pos, replacementValue);
-            formatUpdatedRecordString();
+            return formatUpdatedRecordString();
         }
     }
 
-    public void formatUpdatedRecordString() {
-        // todo format string with ----'s and add to data file
-        // todo REMEMBER: NEED TO ADD /r/n to the end of the string!
+    public String formatUpdatedRecordString() {
+        String parsedString = "";
 
+        for(int i = 0; i < parsedRecord.size(); i++) {
+            String stringToAppend = this.parsedRecord.get(i);
+            int remainingEmptyBytesLength = this.currentDB.currentFieldSizes.get(i) - this.parsedRecord.get(i).length();
+                stringToAppend = stringToAppend.concat(new String(new char[remainingEmptyBytesLength]).replace('\0', '-'));
+                parsedString = parsedString.concat(stringToAppend);
+            }
+
+        return parsedString;
     }
 
     public void formatFoundRecord(String record) {
-        for (String word : this.currentFields) this.currentFieldsNoSpace.add(word.trim());
+        for (String word : this.currentDB.currentFields) this.currentDB.currentFieldsNoSpace.add(word.trim());
         record = record.replaceAll("-+",",");
         this.parsedRecord = new ArrayList<String>(Arrays.asList(record.split(",")));
 
-        for(int i = 0; i < currentFieldsNoSpace.size(); i++) {
-            System.out.printf("%s: %s \t", this.currentFieldsNoSpace.get(i), this.parsedRecord.get(i));
+        for(int i = 0; i < this.currentDB.currentFieldsNoSpace.size(); i++) {
+            System.out.printf("%s: %s \t", this.currentDB.currentFieldsNoSpace.get(i), this.parsedRecord.get(i));
         }
         System.out.print("\n");
     }
@@ -278,15 +249,15 @@ public class FileManager {
         }
         else {
             try {
-                this.currentData.seek(0);
+                this.currentDB.currentData.seek(0);
                 FileWriter writer = new FileWriter("report.txt");
                 String currentFieldsString = "";
-                for(String word: currentFields) currentFieldsString = currentFieldsString.concat(word);
+                for(String word: this.currentDB.currentFields) currentFieldsString = currentFieldsString.concat(word);
                 writer.write(currentFieldsString.toCharArray());
                 writer.write("\r\n");
                 String line;
                 for(int i = 0; i<10; i++){
-                    if((line = currentData.readLine()) != null) {
+                    if((line = this.currentDB.currentData.readLine()) != null) {
                         writer.write(line.toCharArray());
                         writer.write("\r\n");
                     }
@@ -295,7 +266,7 @@ public class FileManager {
                     }
                 }
                 writer.close();
-                currentData.seek(0);
+                this.currentDB.currentData.seek(0);
                 System.out.print("Creating report...\n\n");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -311,8 +282,8 @@ public class FileManager {
         }
         else {
             try {
-                overflowOp = new OverFlowOperations(currentFields);
-               overflowOp.createNewRecord(currentConfig, currentData);
+                overflowOp = new OverFlowOperations(this.currentDB.currentFields);
+               overflowOp.createNewRecord(this.currentDB.currentConfig, this.currentDB.currentData);
             }
             catch (Exception e) {
                 System.out.printf("Error occurred: %s \n", e.toString());
@@ -320,27 +291,37 @@ public class FileManager {
         }
     }
 
-    public void deleteRecord(String currentRecord, String recordID) throws Exception {
-        String replacementString = "MISSING";
+    public void deleteOrUpdateRecord(String currentRecord, String operation, String newRecord) throws Exception {
+        // seek to record
         String line;
-        replacementString = replacementString.concat(new String(new char[this.currentRecordSize - replacementString.length() -2]).replace('\0', '-'));
-        this.currentData.seek(0);
-        while(( line = this.currentData.readLine()) != null && !line.contains(currentRecord)) { }
+        this.currentDB.currentData.seek(0);
+        while(( line = this.currentDB.currentData.readLine()) != null && !line.contains(currentRecord)) { }
 
         //prev while statement ends the file pointer at the NEXT file, so seek to the one before it
-        currentData.seek(currentData.getFilePointer() - this.currentRecordSize);
-        currentData.writeBytes(replacementString + "\r\n");
-        System.out.print("Deleting the above record... \n\n");
+        this.currentDB.currentData.seek(this.currentDB.currentData.getFilePointer() - this.currentDB.currentRecordSize);
+
+
+        if(operation.equals("Deleting")) {
+            String replacementString = "MISSING";
+            replacementString = replacementString.concat(new String(new char[this.currentDB.currentRecordSize - replacementString.length() -2]).replace('\0', '-'));
+
+            this.currentDB.currentData.writeBytes(replacementString + "\r\n");
+        }
+        else if(operation.equals("Updating")) {
+            this.currentDB.currentData.writeBytes(newRecord + "\r\n");
+        }
+
+        System.out.printf("%s the above record... \n\n", operation);
     }
 
     public boolean noOpenedDatabase() {
-        return currentOverflow == null || currentConfig == null || currentData == null && isDatabaseOpen;
+        return this.currentDB.currentOverflow == null || this.currentDB.currentConfig == null || this.currentDB.currentData == null && isDatabaseOpen;
     }
 
     public  String binarySearch(String id) throws Exception
     {
         int Low = 0;
-        int High = this.currentNumRecords;
+        int High = this.currentDB.currentNumRecords;
         int Middle;
         String MiddleId;
         String record = "NOT_FOUND";
@@ -374,10 +355,10 @@ public class FileManager {
             return "NOT_FOUND";
     }
     public String findRecord(int numRecord) throws Exception {
-        if ((numRecord >=1) && (numRecord <= this.currentNumRecords)) {
-            currentData.seek(0); // return to the top fo the file
-            currentData.skipBytes((numRecord - 1) * this.currentRecordSize);
-            return currentData.readLine();
+        if ((numRecord >=1) && (numRecord <= this.currentDB.currentNumRecords)) {
+            this.currentDB.currentData.seek(0); // return to the top fo the file
+            this.currentDB.currentData.skipBytes((numRecord - 1) * this.currentDB.currentRecordSize);
+            return this.currentDB.currentData.readLine();
         }
         else {
             throw new Exception("Out of bounds");
