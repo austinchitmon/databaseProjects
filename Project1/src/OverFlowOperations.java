@@ -1,13 +1,19 @@
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Scanner;
 
 public class OverFlowOperations {
     List<String> fields;
+    List<Integer> currentFieldSizes;
     String fieldsAsString;
+    final int NUM_FILES_FOR_MERGE = 5;
+    Scanner input = new Scanner(System.in);
 
-    OverFlowOperations(List<String> currentFields) {
+    OverFlowOperations(List<String> currentFields, List<Integer> currentFieldSizes) {
         this.fields = new ArrayList<>();
+        this.currentFieldSizes = currentFieldSizes;
         this.fieldsAsString = "";
         for (String word : currentFields) this.fields.add(word.trim());
         this.fields.remove(0);
@@ -15,10 +21,106 @@ public class OverFlowOperations {
 
     }
 
+    OverFlowOperations() {
+        this.fields = new ArrayList<>();
+        this.currentFieldSizes = new ArrayList<>();
+        this.fieldsAsString = "";
+    }
 
-    public void createNewRecord(RandomAccessFile currentConfig, RandomAccessFile currentData) {
+
+    public List<String> createNewRecord(RandomAccessFile currentConfig, RandomAccessFile currentData) throws Exception {
         System.out.printf("Please enter fields for %s\n", this.fieldsAsString);
-        System.out.print("Seperate each field with commas.\n");
+        System.out.print("Separate each field with commas.\nThe record will be given the lowest unused ID number. \n");
+        String inputVal = input.nextLine();
+        if(!inputVal.contains(",")) {
+            throw new Exception("Error: Please seperate fields using commas ',' ");
+        }
+        String[] inputVals = inputVal.split(",");
+        if(!(inputVals.length == this.fields.size())) {
+            throw new Exception("Error: Entered values do not match number of fields");
+        }
+        List<String> myStringList = new ArrayList<String>(inputVals.length);
 
+        int id = getNextID(currentConfig);
+        if(id != 0) {
+            this.incrementNextID(id, currentConfig);
+        }
+        myStringList.add(Integer.toString(id));
+        Collections.addAll( myStringList, inputVals );
+        for(int i = 1; i < myStringList.size(); i++) {
+            if(myStringList.get(i).length() >= this.currentFieldSizes.get(i)) {
+                System.out.printf("Field value: %s\nLength: %d\nMax Length: %d\n", myStringList.get(i), myStringList.get(i).length(), this.currentFieldSizes.get(i + 1));
+                throw new Exception("Error: Field value cannot exceed max field length.");
+            }
+        }
+        return myStringList;
+    }
+
+    public void addToOverFlowFile(String record, CurrentDatabase currentDB) throws IOException {
+        int numFiles = 0;
+        String line = "";
+        currentDB.currentOverflow.seek(0);
+        while ((line = currentDB.currentOverflow.readLine()) != null) {
+            numFiles = numFiles + 1;
+        }
+        currentDB.currentOverflow.writeBytes(record + "\r\n");
+        numFiles = numFiles + 1;
+        if(numFiles >= NUM_FILES_FOR_MERGE) {
+            this.mergeFiles(currentDB);
+        }
+    }
+    public void mergeFiles(CurrentDatabase currentDB) throws IOException {
+        System.out.println("More than 4 records in overflow detected! Merging records...");
+       List<String> overflowRecords = createSortedListForOverflow(currentDB.currentOverflow);
+       String line = "";
+        currentDB.currentData.seek(0);
+        File mergedDataFile = new File("temp.data", "rw");
+        BufferedWriter writer = new BufferedWriter(new FileWriter("temp.data", true));
+
+        while((line = currentDB.currentData.readLine()) != null) {
+            if(!line.contains("MISSING")) {
+                writer.append(line + "\r\n");
+            }
+        }
+        // todo: close data file, rename temp file, open data file.
+    }
+
+    public List<String> createSortedListForOverflow(RandomAccessFile currentOverflow) throws IOException {
+        String line = "";
+        List<String> overflowRecords = new ArrayList<>();
+        currentOverflow.seek(0);
+        while((line = currentOverflow.readLine()) != null) {
+            overflowRecords.add(line);
+        }
+        System.out.println(overflowRecords);
+
+        Collections.sort(overflowRecords);
+        return overflowRecords;
+    }
+
+    public int getNextID(RandomAccessFile currentConfig) throws IOException {
+
+        // todo maybe: if record has been deleted let them use that ID.
+        // todo maybe: during delete, add new line to config: DELETED,1,2,3.... sort those into list.
+        // todo check if that list has values, use those if it does, delete from config.
+        String line = "";
+        currentConfig.seek(0);
+        while((line = currentConfig.readLine()) != null) {
+            if (line.contains("NEXTID")) {
+                String[] lineVals = line.split(",");
+                return Integer.parseInt(lineVals[1]);
+            }
+        }
+        return 0;
+    }
+
+    public void incrementNextID(int lastID, RandomAccessFile currentConfig) throws IOException {
+        String line;
+        currentConfig.seek(0);
+        while((line = currentConfig.readLine()) != null) {
+            if (line.contains("RECORDSIZE")) {
+                currentConfig.writeBytes("NEXTID," + (lastID + 1));
+            }
+        }
     }
 }

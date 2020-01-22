@@ -6,11 +6,12 @@ import java.util.Scanner;
 
 public class FileManager {
     DatabaseCreator dbc = new DatabaseCreator();
-    OverFlowOperations overflowOp = null;
+    CurrentDatabase currentDB = new CurrentDatabase();
+
+    OverFlowOperations overflowOp = new OverFlowOperations();
     Scanner input = new Scanner(System.in);
     String fileName = null;
 
-    CurrentDatabase currentDB = new CurrentDatabase();
     List<String> parsedRecord = new ArrayList<>();
     boolean isDatabaseOpen = false;
 
@@ -94,13 +95,9 @@ public class FileManager {
                 if(!isDatabaseOpen) {
                     this.currentDB = new CurrentDatabase(dbName);
                     this.isDatabaseOpen = true;
-
-                    //get number of records, field names, and record size of the currently opened database file.
-                    this.currentDB.setNumRecordsFieldNamesRecordSize();
                     System.out.printf("Database '%s' successfully opened \n \n", dbName);
-                } else {
+                } else
                     System.out.print("Please close the already opened database to open another database. \n \n");
-                }
 
             }
             catch(FileNotFoundException e) {
@@ -222,7 +219,7 @@ public class FileManager {
     public String formatUpdatedRecordString() {
         String parsedString = "";
 
-        for(int i = 0; i < parsedRecord.size(); i++) {
+        for(int i = 0; i < this.parsedRecord.size(); i++) {
             String stringToAppend = this.parsedRecord.get(i);
             int remainingEmptyBytesLength = this.currentDB.currentFieldSizes.get(i) - this.parsedRecord.get(i).length();
                 stringToAppend = stringToAppend.concat(new String(new char[remainingEmptyBytesLength]).replace('\0', '-'));
@@ -275,15 +272,18 @@ public class FileManager {
     }
 
     public void addRecord() {
-        // TODO add records to overflow, probably create a new file for this
 
         if(noOpenedDatabase()) {
             System.out.print("Error! No database open to add record to. \n\n");
         }
         else {
             try {
-                overflowOp = new OverFlowOperations(this.currentDB.currentFields);
-               overflowOp.createNewRecord(this.currentDB.currentConfig, this.currentDB.currentData);
+                overflowOp = new OverFlowOperations(this.currentDB.currentFields, this.currentDB.currentFieldSizes);
+               this.parsedRecord = overflowOp.createNewRecord(this.currentDB.currentConfig, this.currentDB.currentData);
+
+                String parsedString = this.formatUpdatedRecordString();
+
+                overflowOp.addToOverFlowFile(parsedString, this.currentDB);
             }
             catch (Exception e) {
                 System.out.printf("Error occurred: %s \n", e.toString());

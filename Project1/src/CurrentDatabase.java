@@ -16,10 +16,11 @@ public class CurrentDatabase {
     public List<String> currentFieldsNoSpace = new ArrayList<>();
 
 
-    public CurrentDatabase(String databaseName) throws FileNotFoundException {
+    public CurrentDatabase(String databaseName) throws IOException {
         this.currentData = new RandomAccessFile(databaseName + ".data", "rw");
         this.currentConfig = new RandomAccessFile(databaseName + ".config", "rw");
         this.currentOverflow = new RandomAccessFile(databaseName + ".overflow", "rw");
+        this.setNumRecordsFieldNamesRecordSize();
     }
 
     public CurrentDatabase() {
