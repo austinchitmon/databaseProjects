@@ -139,7 +139,6 @@ public class FileManager {
             if(noOpenedDatabase()) {
                 throw new Exception("No open Database to operate on");
             }
-            // todo: maybe refactor to search by name
             System.out.printf("Enter the name of the record you would like to %s: ", operationType);
             String recordID = input.nextLine();
             currentRecord = this.binarySearch(recordID);
@@ -172,13 +171,13 @@ public class FileManager {
         String fieldToUpdate = input.nextLine();
         if(this.currentDB.currentFieldsNoSpace.contains(fieldToUpdate)) {
             switch(fieldToUpdate){
+                case "NAME":
+                    throw new Exception("Cannot update NAME, as it is the primary key.");
                 case "ID":
-                    throw new Exception("Cannot update ID, as it is the primary key.");
+                    newRecord = inputUpdatedRecordField(0);
+                    break;
                 case "RANK":
                     newRecord = inputUpdatedRecordField(1);
-                    break;
-                case "NAME":
-                    newRecord = inputUpdatedRecordField(2);
                     break;
                 case "CITY":
                     newRecord = inputUpdatedRecordField(3);
@@ -258,6 +257,8 @@ public class FileManager {
                         if(!line.contains("MISSING")) {
                             writer.write(line.toCharArray());
                             writer.write("\r\n");
+                        }
+                        else{
                             i = i - 1;
                         }
                     }
@@ -287,8 +288,10 @@ public class FileManager {
                 String parsedString = this.formatUpdatedRecordString();
 
                 String result = overflowOp.addToOverFlowFile(parsedString, this.currentDB);
-                if(result.equals("merged")) {
+                if(!result.equals("")) {
                     this.renameRecordFiles();
+                    this.currentDB.updateConfigWithNewNumRecords(result);
+                    this.currentDB.clearOverflowFile();
                 }
             }
             catch (Exception e) {
@@ -302,16 +305,11 @@ public class FileManager {
         this.currentDB.currentData = null;
         File oldDataFile = new File("Data.data");
 
-        if(oldDataFile.delete()) {
-            System.out.println("Old data deleted");
-        }
+        oldDataFile.delete();
 
         File mergedDataFile = new File("temp.data");
-        if(mergedDataFile.renameTo(new File(currentDB.currentDBName+".data"))) {
-            System.out.println("successfully renamed");
-        }
+        mergedDataFile.renameTo(new File(currentDB.currentDBName+".data"));
         this.currentDB.currentData = new RandomAccessFile(currentDB.currentDBName+".data", "rw");
-        //todo update config file with new record num
     }
 
     public void deleteOrUpdateRecord(String currentRecord, String operation, String newRecord) throws Exception {

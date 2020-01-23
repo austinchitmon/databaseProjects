@@ -94,4 +94,20 @@ public class CurrentDatabase {
         }
         this.currentConfig.seek(0);
     }
+
+    public void updateConfigWithNewNumRecords(String newNumRecord) throws IOException {
+        String line = "";
+        this.currentConfig.seek(0);
+        while ((line = this.currentConfig.readLine()) != null) {
+            if(line.contains("EMPLOY")) {
+                this.currentConfig.writeBytes("NUMRECORDS,"+newNumRecord+"\r\n");
+            }
+        }
+        this.currentNumRecords = Integer.parseInt(newNumRecord);
+    }
+
+    public void clearOverflowFile() throws IOException {
+        this.currentOverflow.setLength(0);
+
+    }
 }
