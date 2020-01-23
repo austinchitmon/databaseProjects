@@ -56,7 +56,7 @@ public class OverFlowOperations {
         return myStringList;
     }
 
-    public void addToOverFlowFile(String record, CurrentDatabase currentDB) throws IOException {
+    public String addToOverFlowFile(String record, CurrentDatabase currentDB) throws IOException {
         int numFiles = 0;
         String line = "";
         currentDB.currentOverflow.seek(0);
@@ -67,32 +67,60 @@ public class OverFlowOperations {
         numFiles = numFiles + 1;
         if(numFiles >= NUM_FILES_FOR_MERGE) {
             this.mergeFiles(currentDB);
+            return "merged";
         }
+        return "";
     }
     public void mergeFiles(CurrentDatabase currentDB) throws IOException {
         System.out.println("More than 4 records in overflow detected! Merging records...");
-       List<String> overflowRecords = createSortedListForOverflow(currentDB.currentOverflow);
+       List<Record> overflowRecords = createSortedListForOverflow(currentDB.currentOverflow);
        String line = "";
         currentDB.currentData.seek(0);
-        File mergedDataFile = new File("temp.data", "rw");
         BufferedWriter writer = new BufferedWriter(new FileWriter("temp.data", true));
 
         while((line = currentDB.currentData.readLine()) != null) {
             if(!line.contains("MISSING")) {
-                writer.append(line + "\r\n");
+                if (overflowRecords.size() != 0) {
+                    int choice = determineLowestID(line, overflowRecords.get(0).getId());
+
+                    if(choice == 0) {
+                        writer.append(line).append("\r\n");
+                    }
+                    else {
+                        writer.append(overflowRecords.get(0).getRecord()).append("\r\n");
+                        overflowRecords.remove(0);
+                        currentDB.currentData.seek(currentDB.currentData.getFilePointer() - currentDB.currentRecordSize);
+                    }
+                }
             }
         }
+        if(overflowRecords.size() > 0) {
+            for(Record record : overflowRecords) writer.append(record.getRecord()).append("\r\n");
+        }
+        writer.flush();
+        writer.close();
+        currentDB.currentData.close();
+
         // todo: close data file, rename temp file, open data file.
+
     }
 
-    public List<String> createSortedListForOverflow(RandomAccessFile currentOverflow) throws IOException {
+    public int determineLowestID(String dataValue, int overflowId) {
+        int dataID = Integer.parseInt(dataValue.substring(0,4).replaceAll("-+", ""));
+
+        if(dataID < overflowId)
+            return 0;
+        else
+            return 1;
+    }
+
+    public List<Record> createSortedListForOverflow(RandomAccessFile currentOverflow) throws IOException {
         String line = "";
-        List<String> overflowRecords = new ArrayList<>();
+        List<Record> overflowRecords = new ArrayList<>();
         currentOverflow.seek(0);
         while((line = currentOverflow.readLine()) != null) {
-            overflowRecords.add(line);
+            overflowRecords.add(new Record(line));
         }
-        System.out.println(overflowRecords);
 
         Collections.sort(overflowRecords);
         return overflowRecords;

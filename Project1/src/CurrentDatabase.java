@@ -11,6 +11,7 @@ public class CurrentDatabase {
     public RandomAccessFile currentOverflow = null;
     public int currentNumRecords = 0;
     public int currentRecordSize = 0;
+    public String currentDBName;
     public List<Integer> currentFieldSizes = new ArrayList<>();
     public List<String> currentFields = new ArrayList<>();
     public List<String> currentFieldsNoSpace = new ArrayList<>();
@@ -20,6 +21,7 @@ public class CurrentDatabase {
         this.currentData = new RandomAccessFile(databaseName + ".data", "rw");
         this.currentConfig = new RandomAccessFile(databaseName + ".config", "rw");
         this.currentOverflow = new RandomAccessFile(databaseName + ".overflow", "rw");
+        this.currentDBName = databaseName;
         this.setNumRecordsFieldNamesRecordSize();
     }
 

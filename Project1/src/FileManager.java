@@ -283,12 +283,26 @@ public class FileManager {
 
                 String parsedString = this.formatUpdatedRecordString();
 
-                overflowOp.addToOverFlowFile(parsedString, this.currentDB);
+                String result = overflowOp.addToOverFlowFile(parsedString, this.currentDB);
+                if(result.equals("merged")) {
+                    this.renameRecordFiles();
+                }
             }
             catch (Exception e) {
                 System.out.printf("Error occurred: %s \n", e.toString());
             }
         }
+    }
+
+    public void renameRecordFiles() throws IOException {
+        this.currentDB.currentData.close();
+        this.currentDB.currentData = null;
+        File oldDataFile = new File("Data.data", "rw");
+        if(oldDataFile.delete()) {
+            System.out.println("FUCKING DELETE YOU FUCKING PIECE OF SHIT");
+        }
+        File mergedDataFile = new File("temp.data", "rw");
+        mergedDataFile.renameTo(oldDataFile);
     }
 
     public void deleteOrUpdateRecord(String currentRecord, String operation, String newRecord) throws Exception {
