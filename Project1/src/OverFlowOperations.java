@@ -101,7 +101,6 @@ public class OverFlowOperations {
         writer.close();
         currentDB.currentData.close();
 
-
     }
 
     public int determineLowestID(String dataValue, int overflowId) {
@@ -126,10 +125,6 @@ public class OverFlowOperations {
     }
 
     public int getNextID(RandomAccessFile currentConfig) throws IOException {
-
-        // todo maybe: if record has been deleted let them use that ID.
-        // todo maybe: during delete, add new line to config: DELETED,1,2,3.... sort those into list.
-        // todo check if that list has values, use those if it does, delete from config.
         String line = "";
         currentConfig.seek(0);
         while((line = currentConfig.readLine()) != null) {

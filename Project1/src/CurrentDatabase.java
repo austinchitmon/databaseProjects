@@ -75,4 +75,23 @@ public class CurrentDatabase {
         this.currentFieldsNoSpace = new ArrayList<>();
         this.currentFieldSizes = new ArrayList<>();
     }
+
+    public void updateConfigWithDeletedID(String record) throws IOException {
+        String line = "";
+        String newLine = "";
+        String id = (record.substring(0, 4).replaceAll("-+", ""));
+        currentConfig.seek(0);
+        while ((line = this.currentConfig.readLine()) != null) {
+            if (line.contains("DELETEDIDS,")) {
+                newLine = line.concat("," + id);
+            }
+        }
+        currentConfig.seek(0);
+        while ((line = this.currentConfig.readLine()) != null) {
+            if (line.contains("NEXTID")) {
+                this.currentConfig.writeBytes(newLine);
+            }
+        }
+        this.currentConfig.seek(0);
+    }
 }

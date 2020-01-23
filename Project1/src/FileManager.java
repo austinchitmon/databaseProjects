@@ -139,6 +139,7 @@ public class FileManager {
             if(noOpenedDatabase()) {
                 throw new Exception("No open Database to operate on");
             }
+            // todo: maybe refactor to search by name
             System.out.printf("Enter the ID (rank if data unmodified) of the record you would like to %s: ", operationType);
             String recordID = input.nextLine();
             currentRecord = this.binarySearch(recordID);
@@ -253,8 +254,11 @@ public class FileManager {
                 String line;
                 for(int i = 0; i<10; i++){
                     if((line = this.currentDB.currentData.readLine()) != null) {
-                        writer.write(line.toCharArray());
-                        writer.write("\r\n");
+                        if(!line.contains("MISSING")) {
+                            writer.write(line.toCharArray());
+                            writer.write("\r\n");
+                            i = i - 1;
+                        }
                     }
                     else {
                         System.out.println("End of file reached before 10 records created in report. \n");
@@ -322,6 +326,7 @@ public class FileManager {
         if(operation.equals("Deleting")) {
             String replacementString = "MISSING";
             replacementString = replacementString.concat(new String(new char[this.currentDB.currentRecordSize - replacementString.length() -2]).replace('\0', '-'));
+            this.currentDB.updateConfigWithDeletedID(currentRecord);
 
             this.currentDB.currentData.writeBytes(replacementString + "\r\n");
         }
