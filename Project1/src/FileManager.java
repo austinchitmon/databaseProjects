@@ -140,7 +140,7 @@ public class FileManager {
                 throw new Exception("No open Database to operate on");
             }
             // todo: maybe refactor to search by name
-            System.out.printf("Enter the ID (rank if data unmodified) of the record you would like to %s: ", operationType);
+            System.out.printf("Enter the name of the record you would like to %s: ", operationType);
             String recordID = input.nextLine();
             currentRecord = this.binarySearch(recordID);
             this.formatFoundRecord(currentRecord);
@@ -176,6 +176,7 @@ public class FileManager {
                     throw new Exception("Cannot update ID, as it is the primary key.");
                 case "RANK":
                     newRecord = inputUpdatedRecordField(1);
+                    break;
                 case "NAME":
                     newRecord = inputUpdatedRecordField(2);
                     break;
@@ -341,30 +342,29 @@ public class FileManager {
         return this.currentDB.currentOverflow == null || this.currentDB.currentConfig == null || this.currentDB.currentData == null && isDatabaseOpen;
     }
 
-    public  String binarySearch(String id) throws Exception
+    public  String binarySearch(String name) throws Exception
     {
         int Low = 0;
         int High = this.currentDB.currentNumRecords;
         int Middle;
-        String MiddleId;
+        String MiddleName;
         String record = "NOT_FOUND";
         boolean Found = false;
 
-        while (!Found && (High >= Low))
+        while (!Found && (Low <= High))
         {
             Middle = (Low + High) / 2;
             if(Middle == 0) {
                 record = this.findRecord(Middle + 1);
-            }
-            else {
+            }else {
                 record = this.findRecord(Middle);
             }
             while(record.contains("MIS")) {
                 record = this.findRecord(Middle+1);
             }
-            MiddleId = record.substring(0,5).replaceAll("-+","");;
+            MiddleName = record.substring(11,56).replaceAll("-+","");;
 
-            int result = Integer.parseInt(MiddleId) - Integer.parseInt(id);
+            int result = MiddleName.compareTo(name);
             if (result == 0)   // ids match
                 Found = true;
             else if (result > 0)

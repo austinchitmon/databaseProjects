@@ -81,12 +81,14 @@ public class OverFlowOperations {
         while((line = currentDB.currentData.readLine()) != null) {
             if(!line.contains("MISSING")) {
                 if (overflowRecords.size() != 0) {
-                    int choice = determineLowestID(line, overflowRecords.get(0).getId());
+                    int choice = determineLowestName(line, overflowRecords.get(0).getName());
 
-                    if(choice == 0) {
+                    // data is lower if 0, they are same string if 2.
+                    if(choice == 0 || choice == 2) {
                         writer.append(line).append("\r\n");
                     }
-                    else {
+                    // if choice 1, overflow field comes before data line
+                    else if(choice == 1) {
                         writer.append(overflowRecords.get(0).getRecord()).append("\r\n");
                         overflowRecords.remove(0);
                         currentDB.currentData.seek(currentDB.currentData.getFilePointer() - currentDB.currentRecordSize);
@@ -103,16 +105,22 @@ public class OverFlowOperations {
 
     }
 
-    public int determineLowestID(String dataValue, int overflowId) {
-        int dataID = Integer.parseInt(dataValue.substring(0,4).replaceAll("-+", ""));
+    public int determineLowestName(String dataValue, String overflowName) {
+        // todo refactor to compare by name not ID
+        String dataName = dataValue.substring(11,56).replaceAll("-+", "");
 
-        if(dataID < overflowId)
+        int result = dataName.compareTo(overflowName);
+        if(result < 0)
             return 0;
-        else
+        else if(result > 0)
             return 1;
+        else {
+            return 2;
+        }
     }
 
     public List<Record> createSortedListForOverflow(RandomAccessFile currentOverflow) throws IOException {
+        // todo refactor this method to sort by name of company
         String line = "";
         List<Record> overflowRecords = new ArrayList<>();
         currentOverflow.seek(0);
