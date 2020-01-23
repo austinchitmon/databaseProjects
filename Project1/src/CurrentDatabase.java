@@ -26,7 +26,14 @@ public class CurrentDatabase {
     }
 
     public CurrentDatabase() {
-        this.close();
+        this.currentConfig = null;
+        this.currentData = null;
+        this.currentOverflow = null;
+        this.currentRecordSize = 0;
+        this.currentNumRecords = 0;
+        this.currentFields = new ArrayList<>();
+        this.currentFieldsNoSpace = new ArrayList<>();
+        this.currentFieldSizes = new ArrayList<>();
     }
 
     public void setNumRecordsFieldNamesRecordSize() throws IOException {
@@ -55,7 +62,10 @@ public class CurrentDatabase {
             }
         }
     }
-    public void close() {
+    public void close() throws IOException {
+        this.currentData.close();
+        this.currentConfig.close();
+        this.currentOverflow.close();
         this.currentConfig = null;
         this.currentData = null;
         this.currentOverflow = null;

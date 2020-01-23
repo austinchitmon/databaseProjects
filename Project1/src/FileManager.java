@@ -1,8 +1,5 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class FileManager {
     DatabaseCreator dbc = new DatabaseCreator();
@@ -41,7 +38,6 @@ public class FileManager {
                 System.out.println("File created: " + newConfig.getName());
                 System.out.println("File created: " + newData.getName());
                 dbc.createNewConfigAndDataFiles(csvFile, fileName);
-
             } else {
                 System.out.println("Data and Config files already exist, stopping database creation...");
             }
@@ -85,10 +81,12 @@ public class FileManager {
                 // Use read only to see if the file exists. Without these 3 statements,
                 // program would just create new files because of the writing options.
                 // throws FileNotFoundException if files aren't already created.
-                new RandomAccessFile(dbName + ".data", "r");
-                new RandomAccessFile(dbName + ".config", "r");
-                new RandomAccessFile(dbName + ".overflow", "r");
-
+                RandomAccessFile data = new RandomAccessFile(dbName + ".data", "r");
+                RandomAccessFile config = new RandomAccessFile(dbName + ".config", "r");
+                RandomAccessFile overflow = new RandomAccessFile(dbName + ".overflow", "r");
+                data.close();
+                config.close();
+                overflow.close();
                 // if passed the three statements above, means files already exist, which is good.
                 // so now, set 'current' variables to track the opened files.
                 //  First, check if another database is already open.
@@ -108,7 +106,7 @@ public class FileManager {
             }
     }
 
-    public void closeDatabase() {
+    public void closeDatabase() throws IOException {
         if(noOpenedDatabase()) {
             System.out.print("Error! No database open to close \n\n");
         }
@@ -297,12 +295,18 @@ public class FileManager {
     public void renameRecordFiles() throws IOException {
         this.currentDB.currentData.close();
         this.currentDB.currentData = null;
-        File oldDataFile = new File("Data.data", "rw");
+        File oldDataFile = new File("Data.data");
+
         if(oldDataFile.delete()) {
-            System.out.println("FUCKING DELETE YOU FUCKING PIECE OF SHIT");
+            System.out.println("Old data deleted");
         }
-        File mergedDataFile = new File("temp.data", "rw");
-        mergedDataFile.renameTo(oldDataFile);
+
+        File mergedDataFile = new File("temp.data");
+        if(mergedDataFile.renameTo(new File(currentDB.currentDBName+".data"))) {
+            System.out.println("successfully renamed");
+        }
+        this.currentDB.currentData = new RandomAccessFile(currentDB.currentDBName+".data", "rw");
+        //todo update config file with new record num
     }
 
     public void deleteOrUpdateRecord(String currentRecord, String operation, String newRecord) throws Exception {

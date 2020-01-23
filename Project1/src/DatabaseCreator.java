@@ -46,6 +46,9 @@ public class DatabaseCreator {
         // +2 to account for the /n/r escape characters
         newConfigFile.writeBytes("RECORDSIZE," + (recordSize + 2) + "\r\n");
         newConfigFile.writeBytes("NEXTID," + (numRecords + 1) + "\r\n");
+
+        newDatabaseFile.close();
+        newConfigFile.close();
     }
 
     public void createConfigFileFields(String[] values, RandomAccessFile newConfigFile) throws IOException {

@@ -101,7 +101,6 @@ public class OverFlowOperations {
         writer.close();
         currentDB.currentData.close();
 
-        // todo: close data file, rename temp file, open data file.
 
     }
 
