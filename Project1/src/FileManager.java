@@ -255,6 +255,7 @@ public class FileManager {
                 for(int i = 0; i<10; i++){
                     if((line = this.currentDB.currentData.readLine()) != null) {
                         if(!line.contains("MISSING")) {
+                            line = line.replace("-"," ");
                             writer.write(line.toCharArray());
                             writer.write("\r\n");
                         }
