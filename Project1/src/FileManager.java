@@ -139,8 +139,7 @@ public class FileManager {
             if(noOpenedDatabase()) {
                 throw new Exception("No open Database to operate on");
             }
-            // todo: maybe refactor to search by name
-            System.out.printf("Enter the ID (rank if data unmodified) of the record you would like to %s: ", operationType);
+            System.out.printf("Enter the name of the record you would like to %s: ", operationType);
             String recordID = input.nextLine();
             currentRecord = this.binarySearch(recordID);
             this.formatFoundRecord(currentRecord);
@@ -172,12 +171,13 @@ public class FileManager {
         String fieldToUpdate = input.nextLine();
         if(this.currentDB.currentFieldsNoSpace.contains(fieldToUpdate)) {
             switch(fieldToUpdate){
+                case "NAME":
+                    throw new Exception("Cannot update NAME, as it is the primary key.");
                 case "ID":
-                    throw new Exception("Cannot update ID, as it is the primary key.");
+                    newRecord = inputUpdatedRecordField(0);
+                    break;
                 case "RANK":
                     newRecord = inputUpdatedRecordField(1);
-                case "NAME":
-                    newRecord = inputUpdatedRecordField(2);
                     break;
                 case "CITY":
                     newRecord = inputUpdatedRecordField(3);
@@ -255,8 +255,11 @@ public class FileManager {
                 for(int i = 0; i<10; i++){
                     if((line = this.currentDB.currentData.readLine()) != null) {
                         if(!line.contains("MISSING")) {
+                            line = line.replace("-"," ");
                             writer.write(line.toCharArray());
                             writer.write("\r\n");
+                        }
+                        else{
                             i = i - 1;
                         }
                     }
@@ -286,8 +289,10 @@ public class FileManager {
                 String parsedString = this.formatUpdatedRecordString();
 
                 String result = overflowOp.addToOverFlowFile(parsedString, this.currentDB);
-                if(result.equals("merged")) {
+                if(!result.equals("")) {
                     this.renameRecordFiles();
+                    this.currentDB.updateConfigWithNewNumRecords(result);
+                    this.currentDB.clearOverflowFile();
                 }
             }
             catch (Exception e) {
@@ -301,16 +306,11 @@ public class FileManager {
         this.currentDB.currentData = null;
         File oldDataFile = new File("Data.data");
 
-        if(oldDataFile.delete()) {
-            System.out.println("Old data deleted");
-        }
+        oldDataFile.delete();
 
         File mergedDataFile = new File("temp.data");
-        if(mergedDataFile.renameTo(new File(currentDB.currentDBName+".data"))) {
-            System.out.println("successfully renamed");
-        }
+        mergedDataFile.renameTo(new File(currentDB.currentDBName+".data"));
         this.currentDB.currentData = new RandomAccessFile(currentDB.currentDBName+".data", "rw");
-        //todo update config file with new record num
     }
 
     public void deleteOrUpdateRecord(String currentRecord, String operation, String newRecord) throws Exception {
@@ -341,30 +341,29 @@ public class FileManager {
         return this.currentDB.currentOverflow == null || this.currentDB.currentConfig == null || this.currentDB.currentData == null && isDatabaseOpen;
     }
 
-    public  String binarySearch(String id) throws Exception
+    public  String binarySearch(String name) throws Exception
     {
         int Low = 0;
         int High = this.currentDB.currentNumRecords;
         int Middle;
-        String MiddleId;
+        String MiddleName;
         String record = "NOT_FOUND";
         boolean Found = false;
 
-        while (!Found && (High >= Low))
+        while (!Found && (Low <= High))
         {
             Middle = (Low + High) / 2;
             if(Middle == 0) {
                 record = this.findRecord(Middle + 1);
-            }
-            else {
+            }else {
                 record = this.findRecord(Middle);
             }
             while(record.contains("MIS")) {
                 record = this.findRecord(Middle+1);
             }
-            MiddleId = record.substring(0,5).replaceAll("-+","");;
+            MiddleName = record.substring(11,56).replaceAll("-+","");;
 
-            int result = Integer.parseInt(MiddleId) - Integer.parseInt(id);
+            int result = MiddleName.compareTo(name);
             if (result == 0)   // ids match
                 Found = true;
             else if (result > 0)

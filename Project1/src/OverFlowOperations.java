@@ -66,47 +66,60 @@ public class OverFlowOperations {
         currentDB.currentOverflow.writeBytes(record + "\r\n");
         numFiles = numFiles + 1;
         if(numFiles >= NUM_FILES_FOR_MERGE) {
-            this.mergeFiles(currentDB);
-            return "merged";
+            int newNumRecords = this.mergeFiles(currentDB);
+            return Integer.toString(newNumRecords);
         }
         return "";
     }
-    public void mergeFiles(CurrentDatabase currentDB) throws IOException {
+    public int mergeFiles(CurrentDatabase currentDB) throws IOException {
+        int numRecords = 0;
         System.out.println("More than 4 records in overflow detected! Merging records...");
        List<Record> overflowRecords = createSortedListForOverflow(currentDB.currentOverflow);
        String line = "";
         currentDB.currentData.seek(0);
-        BufferedWriter writer = new BufferedWriter(new FileWriter("temp.data", true));
+        BufferedWriter writer = new BufferedWriter(new FileWriter("temp.data", true), 40000);
 
         while((line = currentDB.currentData.readLine()) != null) {
             if(!line.contains("MISSING")) {
-                if (overflowRecords.size() != 0) {
-                    int choice = determineLowestID(line, overflowRecords.get(0).getId());
+                if (overflowRecords.size() > 0) {
+                    int choice = determineLowestName(line, overflowRecords.get(0).getName());
 
+                    // 0 when same string or data comes before
                     if(choice == 0) {
                         writer.append(line).append("\r\n");
                     }
-                    else {
+                    // if choice 1, overflow field comes before data line
+                    else if(choice == 1) {
                         writer.append(overflowRecords.get(0).getRecord()).append("\r\n");
                         overflowRecords.remove(0);
                         currentDB.currentData.seek(currentDB.currentData.getFilePointer() - currentDB.currentRecordSize);
                     }
                 }
+                else {
+                    writer.append(line).append("\r\n");
+                }
+                numRecords = numRecords + 1;
             }
         }
+
+
         if(overflowRecords.size() > 0) {
-            for(Record record : overflowRecords) writer.append(record.getRecord()).append("\r\n");
+            for(int i = 0; i < overflowRecords.size(); i++) {
+                writer.append(overflowRecords.get(i).getRecord()).append("\r\n");
+                numRecords = numRecords + 1;
+            }
         }
-        writer.flush();
+
         writer.close();
         currentDB.currentData.close();
-
+        return numRecords;
     }
 
-    public int determineLowestID(String dataValue, int overflowId) {
-        int dataID = Integer.parseInt(dataValue.substring(0,4).replaceAll("-+", ""));
+    public int determineLowestName(String dataValue, String overflowName) {
+        String dataName = dataValue.substring(11,56).replaceAll("-+", "");
 
-        if(dataID < overflowId)
+        int result = dataName.compareTo(overflowName);
+        if(result <= 0)
             return 0;
         else
             return 1;
