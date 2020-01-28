@@ -100,7 +100,7 @@ public class CurrentDatabase {
         this.currentConfig.seek(0);
         while ((line = this.currentConfig.readLine()) != null) {
             if(line.contains("EMPLOY")) {
-                this.currentConfig.writeBytes("NUMRECORDS,"+newNumRecord+"\r\n");
+                this.currentConfig.writeBytes("NUMRECORDS,"+newNumRecord+"\n");
             }
         }
         this.currentNumRecords = Integer.parseInt(newNumRecord);

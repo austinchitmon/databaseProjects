@@ -39,13 +39,14 @@ public class DatabaseCreator {
             numRecords = numRecords + 1;
         }
         numRecords = numRecords - 1;
-        newConfigFile.writeBytes("NUMRECORDS," + (numRecords) + "\r\n");
+        newConfigFile.writeBytes("NUMRECORDS," + (numRecords) + "\n");
 
         //add number of bytes (chars) for each field together to find total record size for each record.
         for (int num : numBytesForEachField) recordSize = recordSize + num;
         // +2 to account for the /n/r escape characters
-        newConfigFile.writeBytes("RECORDSIZE," + (recordSize + 2) + "\r\n");
-        newConfigFile.writeBytes("NEXTID," + (numRecords + 1) + "\r\n");
+        // +1 if on linux
+        newConfigFile.writeBytes("RECORDSIZE," + (recordSize + 1) + "\n");
+        newConfigFile.writeBytes("NEXTID," + (numRecords + 1) + "\n");
         newConfigFile.writeBytes("DELETEDIDS");
 
         newDatabaseFile.close();
@@ -55,32 +56,32 @@ public class DatabaseCreator {
     public void createConfigFileFields(String[] values, RandomAccessFile newConfigFile) throws IOException {
 
         // configure ID field
-        newConfigFile.writeBytes("ID,"+"5\r\n");
+        newConfigFile.writeBytes("ID,"+"5\n");
         this.numBytesForEachField.add(5);
 
         for(int i = 0; i < values.length; i++) {
             newConfigFile.writeBytes(values[i] + ",");
             switch(values[i]){
                 case "NAME":
-                    newConfigFile.writeBytes("45\r\n");
+                    newConfigFile.writeBytes("45\n");
                     this.numBytesForEachField.add(45);
                     break;
                 case "CITY":
-                    newConfigFile.writeBytes("20\r\n");
+                    newConfigFile.writeBytes("20\n");
                     this.numBytesForEachField.add(20);
                     break;
                 case "RANK":
                 case "STATE":
                 case "ZIP":
-                    newConfigFile.writeBytes("6\r\n");
+                    newConfigFile.writeBytes("6\n");
                     this.numBytesForEachField.add(6);
                     break;
                 case "EMPLOYEES":
-                    newConfigFile.writeBytes("10\r\n");
+                    newConfigFile.writeBytes("10\n");
                     this.numBytesForEachField.add(10);
                     break;
                 default:
-                    newConfigFile.writeBytes("UNDEFINED\r\n");
+                    newConfigFile.writeBytes("UNDEFINED\n");
             }
         }
     }
@@ -105,7 +106,7 @@ public class DatabaseCreator {
                 newDatabaseFile.writeBytes(emptyString);
             }
         }
-        newDatabaseFile.writeBytes( "\r\n");
+        newDatabaseFile.writeBytes( "\n");
         this.idIncrementer = this.idIncrementer + 1;
     }
 }

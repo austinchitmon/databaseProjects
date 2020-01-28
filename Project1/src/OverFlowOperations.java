@@ -63,7 +63,7 @@ public class OverFlowOperations {
         while ((line = currentDB.currentOverflow.readLine()) != null) {
             numFiles = numFiles + 1;
         }
-        currentDB.currentOverflow.writeBytes(record + "\r\n");
+        currentDB.currentOverflow.writeBytes(record + "\n");
         numFiles = numFiles + 1;
         if(numFiles >= NUM_FILES_FOR_MERGE) {
             int newNumRecords = this.mergeFiles(currentDB);
@@ -86,17 +86,17 @@ public class OverFlowOperations {
 
                     // 0 when same string or data comes before
                     if(choice == 0) {
-                        writer.append(line).append("\r\n");
+                        writer.append(line).append("\n");
                     }
                     // if choice 1, overflow field comes before data line
                     else if(choice == 1) {
-                        writer.append(overflowRecords.get(0).getRecord()).append("\r\n");
+                        writer.append(overflowRecords.get(0).getRecord()).append("\n");
                         overflowRecords.remove(0);
                         currentDB.currentData.seek(currentDB.currentData.getFilePointer() - currentDB.currentRecordSize);
                     }
                 }
                 else {
-                    writer.append(line).append("\r\n");
+                    writer.append(line).append("\n");
                 }
                 numRecords = numRecords + 1;
             }
@@ -105,7 +105,7 @@ public class OverFlowOperations {
 
         if(overflowRecords.size() > 0) {
             for(int i = 0; i < overflowRecords.size(); i++) {
-                writer.append(overflowRecords.get(i).getRecord()).append("\r\n");
+                writer.append(overflowRecords.get(i).getRecord()).append("\n");
                 numRecords = numRecords + 1;
             }
         }

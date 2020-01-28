@@ -250,14 +250,14 @@ public class FileManager {
                 String currentFieldsString = "";
                 for(String word: this.currentDB.currentFields) currentFieldsString = currentFieldsString.concat(word);
                 writer.write(currentFieldsString.toCharArray());
-                writer.write("\r\n");
+                writer.write("\n");
                 String line;
                 for(int i = 0; i<10; i++){
                     if((line = this.currentDB.currentData.readLine()) != null) {
                         if(!line.contains("MISSING")) {
                             line = line.replace("-"," ");
                             writer.write(line.toCharArray());
-                            writer.write("\r\n");
+                            writer.write("\n");
                         }
                         else{
                             i = i - 1;
@@ -328,10 +328,10 @@ public class FileManager {
             replacementString = replacementString.concat(new String(new char[this.currentDB.currentRecordSize - replacementString.length() -2]).replace('\0', '-'));
             this.currentDB.updateConfigWithDeletedID(currentRecord);
 
-            this.currentDB.currentData.writeBytes(replacementString + "\r\n");
+            this.currentDB.currentData.writeBytes(replacementString + "\n");
         }
         else if(operation.equals("Updating")) {
-            this.currentDB.currentData.writeBytes(newRecord + "\r\n");
+            this.currentDB.currentData.writeBytes(newRecord + "\n");
         }
 
         System.out.printf("%s the above record... \n\n", operation);
